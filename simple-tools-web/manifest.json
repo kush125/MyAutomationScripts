@@ -1,0 +1,13 @@
+{
+    "manifest_version": 2,
+    "name": "samext",
+    "description": "some text desc",
+    "version": "1.0.0",
+    "icons": {"128":"icon_128.png"},
+    "browser_action": {
+        "default_icon": "icon.png",
+        "default_popup": "index.html"
+    },
+    "content_security_policy": "script-src 'self' https://ajax.googleapis.com; object-src 'self'",
+    "permissions": ["activeTab","https://*/"]
+}

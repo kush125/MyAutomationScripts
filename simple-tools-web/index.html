@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+  <!--  Meta  -->
+  <meta charset="UTF-8" />
+  <title>Tools</title>
+
+  <!--  Styles  -->
+  <link rel="stylesheet" href="styles/index.css">
+
+  <!-- including jQuery google cdn -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+  <!-- Scripts -->
+  <script src="scripts/index.js"></script>
+</head>
+<body>
+  <form>
+    <textarea id="raw-text" placeholder="Paste your text here..." autocomplete="off"></textarea>
+    <br>
+    <button class="sub-btn" id=ext-ip-btn type="button">Extract IPs</button>
+    <button class="sub-btn" id=show-det-btn type="button">Show IP Details</button>
+    <br>
+    <div id=result-text-cont>
+      <textarea id="result-text" placeholder="Result"></textarea>
+    </div>
+    <br>
+    <!--<button class="sub-btn" onclick="copytoclip()">Copy result</button>-->
+  </form>
+  <div class="tooltip">
+<button type='button' id='copytoclip'>
+  <span class="tooltiptext" id="myTooltip">Copy to clipboard</span>
+  Copy text
+  </button>
+</div>
+<!-- test div -->
+<div id=outtext></div>
+</body>
+</html>
