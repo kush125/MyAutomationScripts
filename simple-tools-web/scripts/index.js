@@ -1,35 +1,42 @@
-/**
- * index.js
- * - All our useful JS goes here, awesome!
- */
-
 $(document).ready(function(){
-  console.log("JavaScript is amazing!");
+  console.log("Running...");
 
 
-//On clicking extract IP button  
+//clicking extract IP button  
 $('#ext-ip-btn').on('click', function(event) {
  // $('#result').remove();
  var rawtext = $('#raw-text').val();
  var ipsParsed = extractIP(rawtext);
- $('#result-text').val(ipsParsed.pubIPs.toString()+'\n'+ipsParsed.pvtIPs.toString());
+ $('#result-text').val(ipsParsed.pubIPs.toString().replace(',','\n')+'\n\n'+ipsParsed.pvtIPs.toString().replace(',','\n'));
 });
 
-//on clicking copytext button
+//clicking copytext button
 $('#copytoclip').on('click',copyTextFunc);
 $('#copytoclip').on('mouseout',outFunc);
 
-//On clicking Show IP details button
+//clicking Show IP details button
 $('#show-det-btn').on('click', function(event){
+  console.log("show details button clicked");
   //try --- reload textarea element so that it do not bug out when text area is clicked
   $('#result-text').html('');//can be used to clear div of all its elements
-  $('#result-text').append('IP---Country---ISP');
-  console.log("show details button clicked")
+  $('#result-text').append('IP---Country---ISP\n');
+  
   var rawtext = $('#raw-text').val();
   var ipsParsed = extractIP(rawtext);
-  var parsedArr = fetchDetailsIpvoid('8.8.8.8',callback);
+
+  $.each(ipsParsed.pubIPs, function(i,el){
+    console.log("checking: "+el);
+    fetchDetailsIpvoid(el,callback);
+  });
+  //var parsedArr = fetchDetailsIpvoid('8.8.8.8',callback);
   console.log("show details ended");
   
+});
+
+//clicking check reputation button
+$('#check-rep-btn').on('click', function(event){
+  console.log("check reputation clicked");
+  fetchDetailsVirusTotal('8.8.8.8');
 });
 
 //methord to extract ip and seperate private and public ranges
@@ -70,10 +77,10 @@ function outFunc() {
 
 //for fetching/parsing page from ipVoid
 function fetchDetailsIpvoid(ipStr,callback){
-  console.log('inside fetch')
+  
   var parsedArr = [];
   //post request
-  console.log("sending post request to ipvoid")
+  console.log("sending post request to ipvoid with "+ipStr);
   $.post('https://www.ipvoid.com/ip-blacklist-check/',   // url
        { 'ip': ipStr }, // data to be submit
        function(data, status, jqXHR) {// success callback
@@ -89,7 +96,7 @@ function fetchDetailsIpvoid(ipStr,callback){
           });
           parsedArr.push(rowdata);
       });
-      console.log("calling back display")
+      console.log("calling back display...")
       callback(parsedArr);
         }); 
       
@@ -98,8 +105,7 @@ function fetchDetailsIpvoid(ipStr,callback){
 }
 
 function callback(parsedArr){
-  console.log('sample: 21'+parsedArr[2][1]);
-  $('#result-text').append(parsedArr.toString());
+  $('#result-text').append(extractIP(parsedArr[3][1]).uniqueIps[0]+'---'+parsedArr[9][1].match(/\w{3,}/)+'---'+parsedArr[7][1]+'\n');
 
   //   Array(0) --------parsed Array return format
 // 0: (2) ["Analysis Date", "2020-09-18 04:32:10"]
@@ -117,6 +123,20 @@ function callback(parsedArr){
 // 12: (2) ["Region", "Unknown "]
   // $('#result-text').val(formatres);
   //$('#result-text').val(parsedArr[2,1]);
+}
+
+function fetchDetailsVirusTotal(ipStr){
+  console.log("inside virustotel");
+  var positives;
+  var total;
+  $.get('https://www.virustotal.com/gui/ip-address/'+ipStr+'/detection',  // url
+      function (data, textStatus, jqXHR) {  // success callback
+          $('#outtext').html(data);
+          //alert('status: ' + textStatus + ', data:' + data);
+          console.log(data);
+          //positives = $(data).find('div > div > div.positives').text();
+          //console.log(positives);
+    });
 }
 //test code
   //using xmlhttprequest-failed
