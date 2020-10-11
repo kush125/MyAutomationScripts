@@ -7,7 +7,7 @@ $('#ext-ip-btn').on('click', function(event) {
  // $('#result').remove();
  var rawtext = $('#raw-text').val();
  var ipsParsed = extractIP(rawtext);
- $('#result-text').val(ipsParsed.pubIPs.toString().replace(',','\n')+'\n\n'+ipsParsed.pvtIPs.toString().replace(',','\n'));
+ $('#result-text').val(ipsParsed.pubIPs.toString().replace(/,/g,'\n')+'\n\n'+ipsParsed.pvtIPs.toString().replace(/,/g,'\n'));
 });
 
 //clicking copytext button
@@ -26,7 +26,7 @@ $('#show-det-btn').on('click', function(event){
 
   $.each(ipsParsed.pubIPs, function(i,el){
     console.log("checking: "+el);
-    fetchDetailsIpvoid(el,callback);
+    fetchDetailsIpvoid(el,displayFunc,0);
   });
   //var parsedArr = fetchDetailsIpvoid('8.8.8.8',callback);
   console.log("show details ended");
@@ -36,7 +36,16 @@ $('#show-det-btn').on('click', function(event){
 //clicking check reputation button
 $('#check-rep-btn').on('click', function(event){
   console.log("check reputation clicked");
-  fetchDetailsVirusTotal('8.8.8.8');
+  $('#result-text-cont').html('');
+  var rawtext = $('#raw-text').val();
+  var ipsParsed = extractIP(rawtext);
+
+  $.each(ipsParsed.pubIPs, function(i,el){
+    console.log("checking: "+el);
+    fetchDetailsIpvoid(el,displayFunc,1);
+    fetchDetailsAbuseIP(el,displayFunc);
+    fetchDetailsVirusTotal(el,displayFunc);
+  });
 });
 
 //methord to extract ip and seperate private and public ranges
@@ -76,7 +85,7 @@ function outFunc() {
 //----------end of copy to clipboard functions
 
 //for fetching/parsing page from ipVoid
-function fetchDetailsIpvoid(ipStr,callback){
+function fetchDetailsIpvoid(ipStr,displayFunc,optn){
   
   var parsedArr = [];
   //post request
@@ -96,17 +105,39 @@ function fetchDetailsIpvoid(ipStr,callback){
           });
           parsedArr.push(rowdata);
       });
-      console.log("calling back display...")
-      callback(parsedArr);
+      //dividing display methord with the type of button clicked
+      if(optn == 0){
+        displayFunc({
+          type : 'ipvoid_details',
+          datarr : parsedArr
+        });
+
+      }else if(optn==1){
+        var value = parsedArr[2][1].match(/\d*\/\d*/)[0].split('/')[0];
+        var total = parsedArr[2][1].match(/\d*\/\d*/)[0].split('/')[1];
+        displayFunc({
+          intel : 'IPvoid',
+          type : 'meter',
+          value : value,
+          total : total
+        });
+      }
+      //ipVoidParse(parsedArr,displayFunc);
         }); 
       
         //return parsedArr;
-        return parsedArr;
+        //return parsedArr;
 }
-
-function callback(parsedArr){
-  $('#result-text').append(extractIP(parsedArr[3][1]).uniqueIps[0]+'---'+parsedArr[9][1].match(/\w{3,}/)+'---'+parsedArr[7][1]+'\n');
-
+//obsolete
+// function ipVoidParse(parsedArr, displayFunc){
+//   //$('#result-text').append(extractIP(parsedArr[3][1]).uniqueIps[0]+'---'+parsedArr[9][1].match(/\w{3,}.*/)+'---'+parsedArr[7][1]+'\n');
+//   var value = parsedArr[2][1].match(/\d*\/\d*/)[0].split('/')[0];
+//   var total = parsedArr[2][1].match(/\d*\/\d*/)[0].split('/')[1];
+//   displayFunc({
+//     type : 'meter',
+//     value : value,
+//     total : total
+//   });
   //   Array(0) --------parsed Array return format
 // 0: (2) ["Analysis Date", "2020-09-18 04:32:10"]
 // 1: (2) ["Elapsed Time", "3 seconds"]
@@ -123,21 +154,95 @@ function callback(parsedArr){
 // 12: (2) ["Region", "Unknown "]
   // $('#result-text').val(formatres);
   //$('#result-text').val(parsedArr[2,1]);
-}
+// }
 
-function fetchDetailsVirusTotal(ipStr){
+function displayFunc(dispobj){
+  switch (dispobj.type) {
+    case 'meter':
+      $('#result-text-cont').append(
+        "<label>"+dispobj.intel+": "+dispobj.value+"/"+dispobj.total+":</label><meter value=\""+dispobj.value+"\" min=\"0\" max=\""+dispobj.total+"\">2 out of 10</meter><br>");
+
+    case 'ipvoid_details':
+      $('#result-text').append(extractIP(dispobj.datarr[3][1]).uniqueIps[0]+'---'+dispobj.datarr[9][1].match(/\w{3,}.*/)+'---'+dispobj.datarr[7][1]+'\n');
+
+  }
+}
+//obsolete
+// function displayMeter(value, max, parsedArr){
+  
+//   $('#result-text-cont').append("<meter value=\""+value+"\" min=\"0\" max=\""+max+"\">2 out of 10</meter><br>");
+// }
+
+// function displayDetails(value, total, parsedArr){
+//   $('#result-text').append(extractIP(parsedArr[3][1]).uniqueIps[0]+'---'+parsedArr[9][1].match(/\w{3,}.*/)+'---'+parsedArr[7][1]+'\n');
+// }
+
+function fetchDetailsVirusTotal(ipStr,displayFunc){
   console.log("inside virustotel");
   var positives;
   var total;
-  $.get('https://www.virustotal.com/gui/ip-address/'+ipStr+'/detection',  // url
+  $.getJSON('https://www.virustotal.com//ui/ip_addresses/'+ipStr,  // url
       function (data, textStatus, jqXHR) {  // success callback
-          $('#outtext').html(data);
-          //alert('status: ' + textStatus + ', data:' + data);
-          console.log(data);
-          //positives = $(data).find('div > div > div.positives').text();
-          //console.log(positives);
+         //parsing extracting totel and positives from json
+          $.each(data, function(index, element){
+            var final_stats=element.attributes.last_analysis_stats;
+            positives=final_stats.malicious+final_stats.suspicious;
+            total=final_stats.harmless+final_stats.malicious+final_stats.suspicious+final_stats.timeout+final_stats.undetected;
+            displayFunc({
+              intel : 'VirusTotal',
+              type : 'meter',
+              value : positives,
+              total : total
+            });
+          });
     });
 }
+//not working
+function fetchDetailsMXtoolBox(ipStr){
+  console.log("inside mxtool");
+    //get request---https://mxtoolbox.com/api/v1/Lookup?command=blacklist&argument="+ipStr+"&resultIndex=2&disableRhsbl=false&format=2
+  $.get("https://mxtoolbox.com/api/v1/user",  // url
+      function (data, textStatus, jqXHR) {  // success callback
+        console.log(data);
+        $("#outtext").html(data);
+        $.get("https://mxtoolbox.com/api/v1/Lookup?command=blacklist&argument=1.1.1.1&resultIndex=1&disableRhsbl=true&format=2",
+          function (data1){
+            console.log(data1);
+          });
+          //try to authenticate using api key before requesting OR pass parameters in requests
+          //alert('status: ' + textStatus + ', data:' + data);
+    });
+  }
+
+  function fetchDetailsAbuseIP(ipStr){
+    var confidence;
+    var reported;
+    $.get("https://www.abuseipdb.com/check/"+ipStr,  // url
+      function (data, textStatus, jqXHR) {  // success callback
+        //$("#outtext").html(data);
+        
+        if (!(($(data).find('.well > h3').text()).includes('not'))){
+          console.log($(data).find('.well > p').eq(0).text());
+          reported = $(data).find('.well > p').eq(0).text().match(/\d+/g)[0];
+          confidence = $(data).find('.well > p').eq(0).text().match(/\d+/g)[1];
+          console.log("confidence="+confidence+" reported="+reported);
+          displayFunc({
+            intel : 'AbuseIPdb',
+            type : 'meter',
+            value : confidence,
+            total : 100
+          });
+        }else{
+          displayFunc({
+            intel : 'AbuseIPdb',
+            type : 'meter',
+            value : 0,
+            total : 100
+          });
+        }
+        
+    });
+  }
 //test code
   //using xmlhttprequest-failed
 //   console.log('just out')
